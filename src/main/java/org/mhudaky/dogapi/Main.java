@@ -1,4 +1,4 @@
-package org.dogapi;
+package org.mhudaky.dogapi;
 
 public class Main {
     public static void main(String[] args) {
