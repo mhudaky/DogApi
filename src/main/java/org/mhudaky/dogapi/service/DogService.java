@@ -4,6 +4,7 @@ import org.mhudaky.dogapi.model.Dog;
 import org.mhudaky.dogapi.repository.DogRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
