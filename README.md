@@ -42,3 +42,7 @@ To run the unit and integration tests, execute:
 ```bash
 mvn test
 ```
+
+## API Documentation
+
+Access the OpenAPI specification at: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
