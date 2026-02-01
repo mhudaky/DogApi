@@ -2,6 +2,7 @@ package org.mhudaky.dogapi.repository;
 
     import org.junit.jupiter.api.Test;
     import org.mhudaky.dogapi.model.Dog;
+    import org.mhudaky.dogapi.model.Gender;
     import org.springframework.beans.factory.annotation.Autowired;
     import org.springframework.boot.test.context.SpringBootTest;
     import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ package org.mhudaky.dogapi.repository;
             Dog dog = new Dog();
             dog.setName("Buddy");
             dog.setBreed("Golden Retriever");
+            dog.setGender(Gender.MALE);
             dog.setImage("http://example.com/image.jpg");
 
             Dog savedDog = dogRepository.save(dog);
