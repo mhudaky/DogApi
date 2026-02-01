@@ -1,8 +1,11 @@
-package org.mhudaky.dogapi.controller;
+package org.mhudaky.dogapi.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mhudaky.dogapi.DogApiApplication;
+import org.mhudaky.dogapi.model.Dog;
+import org.mhudaky.dogapi.model.Gender;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,12 +19,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = DogApiApplication.class)
 @AutoConfigureWebMvc
-class DogControllerIntegrationTest {
+class DogApiTest {
 
     @Autowired
     private WebApplicationContext webApplicationContext;
 
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setUp() {
@@ -38,36 +44,40 @@ class DogControllerIntegrationTest {
 
     @Test
     void createDog_shouldReturnCreatedAndDogJson() throws Exception {
-        String dogJson = "{\"name\":\"Buddy\",\"breed\":\"Golden Retriever\",\"image\":\"http://example.com/image.jpg\"}";
+        Dog dog = sampleDog();
 
         mockMvc.perform(post("/api/dogs")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(dogJson))
+                .content(objectMapper.writeValueAsString(dog)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$.name").value("Buddy"))
                 .andExpect(jsonPath("$.breed").value("Golden Retriever"))
+                .andExpect(jsonPath("$.gender").value("MALE"))
                 .andExpect(jsonPath("$.image").value("http://example.com/image.jpg"));
     }
 
     @Test
     void getDogById_shouldReturnDogJson() throws Exception {
         // First, create a dog to retrieve
-        String dogJson = "{\"name\":\"Max\",\"breed\":\"Labrador\",\"imageUrl\":\"http://example.com/max.jpg\"}";
+        Dog dog = sampleDog();
+        dog.setName("Max");
+        dog.setBreed("Labrador");
+        dog.setGender(Gender.FEMALE);
         String response = mockMvc.perform(post("/api/dogs")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(dogJson))
+                .content(objectMapper.writeValueAsString(dog)))
                 .andReturn().getResponse().getContentAsString();
 
-        // Extract ID from response (assuming JSON has "id" field)
-        // For simplicity, assume ID is 1; in real tests, parse JSON
-        Long dogId = 1L;
+        // Parse ID from response
+        Long dogId = objectMapper.readTree(response).get("id").asLong();
 
         mockMvc.perform(get("/api/dogs/{id}", dogId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json"))
                 .andExpect(jsonPath("$.name").value("Max"))
-                .andExpect(jsonPath("$.breed").value("Labrador"));
+                .andExpect(jsonPath("$.breed").value("Labrador"))
+                .andExpect(jsonPath("$.gender").value("FEMALE"));
     }
 
     @Test
@@ -79,13 +89,15 @@ class DogControllerIntegrationTest {
     @Test
     void deleteDog_shouldReturnNoContent() throws Exception {
         // Create a dog first
-        String dogJson = "{\"name\":\"Rex\",\"breed\":\"Bulldog\",\"imageUrl\":\"http://example.com/rex.jpg\"}";
+        Dog dog = sampleDog();
+        dog.setName("Rex");
+        dog.setBreed("Bulldog");
         String response = mockMvc.perform(post("/api/dogs")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(dogJson))
+                .content(objectMapper.writeValueAsString(dog)))
                 .andReturn().getResponse().getContentAsString();
 
-        Long dogId = 1L; // Assume ID
+        Long dogId = objectMapper.readTree(response).get("id").asLong();
 
         mockMvc.perform(delete("/api/dogs/{id}", dogId))
                 .andExpect(status().isNoContent());
@@ -99,5 +111,69 @@ class DogControllerIntegrationTest {
     void deleteDog_shouldReturnNotFoundForNonExistentId() throws Exception {
         mockMvc.perform(delete("/api/dogs/{id}", 999L))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testCreateDog_ValidInput() throws Exception {
+        Dog dog = sampleDog();
+
+        mockMvc.perform(post("/api/dogs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dog)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void testCreateDog_InvalidName_Blank() throws Exception {
+        Dog dog = sampleDog();
+        dog.setName("");
+
+        mockMvc.perform(post("/api/dogs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dog)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateDog_InvalidName_Null() throws Exception {
+        Dog dog = sampleDog();
+        dog.setName(null);
+
+        mockMvc.perform(post("/api/dogs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dog)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateDog_InvalidGender_Null() throws Exception {
+        Dog dog = sampleDog();
+        dog.setName("Max");
+        dog.setBreed("Labrador");
+        dog.setGender(null);  // Invalid: null gender
+
+        mockMvc.perform(post("/api/dogs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dog)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateDog_InvalidGender_InvalidString() throws Exception {
+        String dogJson = "{\"name\":\"Max\",\"breed\":\"Labrador\",\"gender\":\"INVALID\",\"image\":\"http://example.com/max.jpg\"}";
+
+        mockMvc.perform(post("/api/dogs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dogJson))
+                .andExpect(status().isBadRequest());
+    }
+
+    private Dog sampleDog() {
+        Dog dog = new Dog();
+        dog.setName("Buddy");
+        dog.setBreed("Golden Retriever");
+        dog.setGender(Gender.MALE);
+        dog.setImage("http://example.com/image.jpg");
+        return dog;
     }
 }
