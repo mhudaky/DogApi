@@ -15,6 +15,16 @@ To build the application, run the following command in the project root director
 mvn clean compile
 ```
 
+## Database Schema Management
+
+This project uses Liquibase for managing database schema changes. The master changelog is located at `src/main/resources/db/changelog/db.changelog-master.xml`.
+
+To apply changes, run the application or use Maven:
+
+```bash
+mvn liquibase:update
+```
+
 ## Run
 
 To run the application locally, use:
